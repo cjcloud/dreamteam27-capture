@@ -1,0 +1,25 @@
+{
+  "projects": {
+    "default": "footieteamz26"
+  },
+  "targets": {
+    "footieteamz26": {
+      "hosting": {
+        "production": [
+          "dtcapture26"
+        ],
+        "development": [
+          "dtcapture26-dev"
+        ]
+      }
+    },
+    "dtcapture26": {
+      "hosting": {
+        "development": [
+          "dtcapture26-dev"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}

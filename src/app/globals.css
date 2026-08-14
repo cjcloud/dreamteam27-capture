@@ -1,0 +1,102 @@
+@import "tailwindcss";
+
+:root {
+  --background: #212122;
+  --foreground: #171717;
+
+  /* Primary Colors */
+  --color-primary-50: #7ff2b4;
+  --color-primary-100: #68efa6;
+  --color-primary-200: #39eb8b;
+  --color-primary-300: #17da71;
+  --color-primary-400: #12ac59;
+  --color-primary-500: #0d7e41;
+  --color-primary-600: #085029;
+  --color-primary-700: #032211;
+  --color-primary-800: #000000;
+  --color-primary-900: #000000;
+  --color-primary-950: #000000;
+
+  /* Secondary Colors */
+  --color-secondary-50: #afb2e2;
+  --color-secondary-100: #9ca0db;
+  --color-secondary-200: #777ccd;
+  --color-secondary-300: #5259bf;
+  --color-secondary-400: #3c42a2;
+  --color-secondary-500: #2e337d;
+  --color-secondary-600: #202458;
+  --color-secondary-700: #131532;
+  --color-secondary-800: #05050d;
+  --color-secondary-900: #000000;
+  --color-secondary-950: #000000;
+
+  /* Accent Colors */
+  --color-accent-50: #ffffff;
+  --color-accent-100: #f5ffee;
+  --color-accent-200: #d9ffbb;
+  --color-accent-300: #bcff88;
+  --color-accent-400: #9fff55;
+  --color-accent-500: #82ff22;
+  --color-accent-600: #67ee00;
+  --color-accent-700: #51bb00;
+  --color-accent-800: #3b8800;
+  --color-accent-900: #255500;
+  --color-accent-950: #1a3b00;
+}
+
+/* ---- DreamTeam27 colour themes (semantic tokens) ----
+   Swap the whole app by changing <html data-theme="...">.
+   Add a new palette = add one [data-theme] block below. */
+[data-theme="prussian"] {
+  --dt-bg: #0D0C1D;
+  --dt-surface: #161B33;
+  --dt-surface-2: #474973;
+  --dt-primary: #474973;
+  --dt-primary-contrast: #F1DAC4;
+  --dt-accent: #A69CAC;
+  --dt-content: #F1DAC4;
+  --dt-content-muted: #A69CAC;
+  --dt-border: #474973;
+}
+[data-theme="aquamarine"] {
+  --dt-bg: #C5E0D8;
+  --dt-surface: #FFFFFF;
+  --dt-surface-2: #B5FFE9;
+  --dt-primary: #444545;
+  --dt-primary-contrast: #FFFFFF;
+  --dt-accent: #CEABB1;
+  --dt-content: #444545;
+  --dt-content-muted: #5F6060;
+  --dt-border: #C9C9C9;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+
+  /* Semantic theme tokens -> Tailwind utilities (bg-dt-bg, text-dt-content, ...) */
+  --color-dt-bg: var(--dt-bg);
+  --color-dt-surface: var(--dt-surface);
+  --color-dt-surface-2: var(--dt-surface-2);
+  --color-dt-primary: var(--dt-primary);
+  --color-dt-primary-contrast: var(--dt-primary-contrast);
+  --color-dt-accent: var(--dt-accent);
+  --color-dt-content: var(--dt-content);
+  --color-dt-content-muted: var(--dt-content-muted);
+  --color-dt-border: var(--dt-border);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #212122;
+    --foreground: #333333;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}

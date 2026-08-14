@@ -1,0 +1,47 @@
+{
+  "name": "dreamteam27-capture",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "clean": "if exist .next rd /s /q .next && if exist out rd /s /q out && if exist \"src\\app\\update\\[manager]\" rd /s /q \"src\\app\\update\\[manager]\"",
+    "deploy": "npm run clean && next build && firebase deploy",
+    "git-clean": "git rm -r --cached . && git add .",
+    "deploy:dev": "npm run git-clean && git commit -m \"Deploy to development\" && git checkout develop && git push -u origin develop && npm run clean && next build && firebase deploy --only hosting:development",
+    "deploy:prod": "npm run git-clean && git commit -m \"Deploy to production\" && git checkout main && git push -u origin main && npm run clean && next build && firebase deploy --only hosting:production",
+    "update-remote": "git remote remove origin && git remote add origin https://github.com/cjcloud/dtcapture26.git"
+  },
+  "dependencies": {
+    "@heroicons/react": "^2.2.0",
+    "@preact/signals-react": "^3.2.0",
+    "firebase": "^11.9.0",
+    "firebase-admin": "^13.4.0",
+    "lucide-react": "^0.513.0",
+    "moment": "^2.30.1",
+    "moment-timezone": "^0.6.0",
+    "next": "15.3.3",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-dropzone": "^14.3.8",
+    "react-icons": "^5.5.0",
+    "react-toastify": "^11.0.5",
+    "react-use-cart": "^1.14.0",
+    "zustand": "^5.0.5"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4",
+    "@types/lodash": "^4.14.202",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "15.3.3",
+    "firebase-tools": "^14.6.0",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
