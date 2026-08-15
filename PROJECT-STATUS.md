@@ -468,6 +468,70 @@ exposed and rotate them. Its own job — untangle when there's bandwidth.
 - **Documentation charter added** (top of this file): keeping this status doc
   current — progress, decisions, problem resolutions — is a core deliverable.
 
+### Session log — 2026-08-15 (later: deploy + hardening)
+
+Both apps taken from "pushed to GitHub" to **live in production on their real
+domains**, plus a security-hardening pass on capture.
+
+- **Both apps deployed to Vercel and live on custom domains.**
+  - capture → **https://dreamteam27.info** (+ `www`)
+  - display → live on Vercel (domain `dreamteam27.co.uk` — configure/verify the
+    same way).
+  - DNS at **IONOS**: the apex `A @` and `AAAA @` "Default Site" rows are
+    IONOS-managed and locked (no delete icon); **disable** them to release, then
+    add `A @ → 216.198.79.1` and `CNAME www → <vercel-dns target>`. Watch the
+    trap: the apex A must be host `@`, not `www` (a `www` A silently conflicts
+    with the `www` CNAME). Leave all MX/TXT/`_dmarc`/dkim rows (email) untouched.
+    Vercel's per-domain "View DNS configuration" gives the exact values; the www
+    CNAME target is unique per domain.
+- **CRITICAL DEPLOY GOTCHA — Next.js CVE-2025-66478 hard-blocks Vercel deploys.**
+  Vercel *fails the build at the "Deploying outputs" step* (clean compile, no
+  error in the build-log body — the reason shows only in the deployment's status
+  header) for any vulnerable Next version. This is a critical (CVSS 10.0) RSC RCE.
+  - **Do NOT run `next@latest`** — it jumps to Next **16**, which breaks the build
+    here (Turbopack becomes default → `@tailwindcss` worker `EINVAL`, plus
+    deprecated config keys). Next 16 is a deliberate migration for another day.
+  - **Patched 15.x releases:** 15.5.7 is the *minimum* for the 15.5 line; we
+    pinned the current head **15.5.23** (exact, no `^`, so the lockfile can't drift
+    back to a vulnerable `.0`). 15.3.3 and 15.5.0 were both caught.
+  - Display is on Next **13.5.11**, which is **not** in the CVE range — deployed
+    as-is, no bump needed.
+  - Advisory also recommends **rotating secrets** after patching (done — see below).
+- **`footieteamz27` service-account key rotated.** The live admin key was briefly
+  visible on screen during the deploy debug, *and* the CVE advisory calls for
+  secret rotation. Generated a fresh key → updated `FIREBASE_ADMIN_PRIVATE_KEY` in
+  Vercel + `.env.local` → redeployed → verified a write → **then** deleted the old
+  key (generate does NOT retire the old one; both stay valid until explicitly
+  deleted). Order matters: delete-last so there's never a no-working-key window.
+- **Capture auth locked down.**
+  - **Self-registration disabled** in the `dtcapture26` Authentication console
+    (Firebase has no allowlist toggle; disabling sign-up is the lock). Only
+    pre-created users can log in. `/register` route/code kept (may be useful later;
+    it's inert while console sign-up is off).
+  - **Whole app gated behind `AuthGuard`.** Previously the guard was applied to
+    only `/managers` and `/update` — every other route (incl. `/data`, `/upload`,
+    `/migrate`, `/rollback-players`) loaded **without login**. Now gated once at
+    the layer that wraps all pages (`client-layout.tsx`), with `/login` + `/register`
+    allowlisted to avoid a redirect loop; the redundant per-page guards on
+    `/managers` and `/update` removed. **Dev bypass removed** from
+    `auth-guard.tsx` (the `BYPASS_AUTH_IN_DEV` flag — a latent prod hazard).
+  - ⚠️ **Still open — this gates the UI only, not the API.** `/api/upload`,
+    `/api/migrate-*`, `/api/rollback-*`, `/api/players` can still be POSTed
+    directly (AuthGuard is client-side). Server-side Firebase-token checks on the
+    write routes are the follow-up that makes the lockdown real.
+  - ⚠️ **Firebase read rule still `.read: true`.** Data is readable straight from
+    the DB regardless of the login screen, and **display reads the same
+    `footieteamz27` DB publicly** — so read-locking is a design fork, not a toggle.
+- **Capture UI rebranded** `DTCapture26` → **`DreamTeam27 Capture`** across
+  navbar, login heading, page/tab titles (`metadata.ts`, `data`/`login`/`register`
+  page titles), and a faded page **watermark**. Accent colour on **"Team"** is
+  `text-green-300` to match the logo (nav + login heading consistent). NOTE: the
+  strings were split markup (`DT<span>Capture</span>26`), so a plain-text grep
+  missed some — the watermark and the login heading each needed a direct edit.
+  The **`dtcapture26` project ID** (auth wiring) was deliberately **not** touched
+  — that's the §5 migration, separate from cosmetic branding. Logo asset still
+  named `footballCapture26.png` (cosmetic remnant, left).
+
 ### Fixed earlier (prior session)
 
 - Player-retrieval endpoint corrected to `/players` (+ `userId` UUID from
@@ -493,17 +557,35 @@ European clubs costs almost nothing in achievable points.
    to end. Checklist: `SMOKE-TEST.md`.
 2. ✅ **Repos + security (2026-08-15).** Separate private repos pushed; exposed
    `footieteamz26` key revoked.
-3. **Vercel deploy (in progress).** Import both repos → add env vars → set domains
-   (`dreamteam27.info` capture, `dreamteam27.co.uk` display). Both free tier, both
-   push-to-deploy on `main`. See §11.
-4. **Pre-season reset** — before the real season, clear `/0` (managers) and
-   `/1/playerData`, keeping structure/rules; re-freeze the reference if needed.
-   **Back up `/0` and `/1/playerData` first** (irreversible).
-5. **Display app** — finish neon theming on the remaining pages; verify it reads
-   `footieteamz27` and renders the new teams/prices; confirm static-export behaviour
-   on Vercel (§3).
-6. **Post-launch** — migrate capture auth off `dtcapture26` (§5); optionally flip
-   `ignoreBuildErrors`/`ignoreDuringBuilds` to `false`; rotate the umbrella-repo
-   secrets (§11 cleanup note).
+3. ✅ **Both apps deployed to Vercel (2026-08-15).** Push-to-deploy on `main`,
+   patched to Next 15.5.23 (capture) / on 13.5.11 (display). See §11 + the
+   2026-08-15 session log.
+4. ✅ **Domains (2026-08-15).** capture live on **dreamteam27.info** (+www) via
+   IONOS DNS → Vercel. display on `dreamteam27.co.uk` — verify green.
+5. ✅ **`footieteamz27` key rotated (2026-08-15).** Per CVE advisory + on-screen
+   exposure. Old key deleted.
+6. ✅ **Capture auth locked down (2026-08-15).** Self-registration disabled in
+   `dtcapture26`; whole app gated behind `AuthGuard`; dev bypass removed.
 
-_Last updated: 2026-08-15._
+**Remaining / still open:**
+
+- ⚠️ **Harden the capture API routes (server-side auth).** `AuthGuard` protects
+  the UI only; the write/migrate endpoints are still directly reachable. Add
+  Firebase ID-token verification to `/api/upload`, `/api/migrate-*`,
+  `/api/rollback-*`, `/api/players`. This is the real lockdown; the UI gate is
+  cosmetic against a determined actor.
+- **Pre-season reset** — before the real season, clear `/0` (managers) and
+  `/1/playerData`, keeping structure/rules; re-freeze the reference if needed.
+  **Back up `/0` and `/1/playerData` first** (irreversible).
+- **Display app** — finish neon theming on the remaining pages; confirm live reads
+  render new teams/prices; verify `dreamteam27.co.uk` is green.
+- **Read-rule design fork** — `.read: true` leaves data publicly readable; display
+  depends on that. Decide whether capture data needs true rule-level privacy
+  (would require separating the data or app-distinguishing rules).
+- **Migrate capture auth off `dtcapture26`** (§5) — stale cross-season login
+  dependency; not a blocker.
+- **Cosmetic remnants** — logo asset `footballCapture26.png`; optionally flip
+  `ignoreBuildErrors`/`ignoreDuringBuilds` to `false`; rotate the umbrella-repo
+  secrets (§11 cleanup note).
+
+_Last updated: 2026-08-15 (deploy + hardening session)._
