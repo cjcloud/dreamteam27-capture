@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "DTCapture26",
+  title: "DreamTeam27 Capture",
   description: "Data capture and management application",
 };

@@ -22,25 +22,25 @@ export default function Navbar() {
       console.error('Error signing out:', error)
     }
   }
-  
+
   // Function to close mobile menu
   const closeMenu = () => {
     setIsMenuOpen(false)
   }
 
   // Enhanced Link component that closes the menu on click
-  const NavLink = ({ 
-    href, 
-    children, 
-    className 
-  }: { 
-    href: string; 
-    children: React.ReactNode; 
+  const NavLink = ({
+    href,
+    children,
+    className
+  }: {
+    href: string;
+    children: React.ReactNode;
     className?: string;
   }) => {
     return (
-      <Link 
-        href={href} 
+      <Link
+        href={href}
         className={className}
         onClick={closeMenu}
       >
@@ -55,16 +55,16 @@ export default function Navbar() {
         <div className="flex justify-between h-16">
           <div className="flex items-center gap-6">
             <NavLink href="/" className="flex items-center font-bold text-md hover:text-blue-100 transition-colors">
-              <Image 
-                src="footballCapture26.png" 
-                alt="Football Capture Logo" 
-                width={24} 
-                height={24} 
+              <Image
+                src="footballCapture26.png"
+                alt="Football Capture Logo"
+                width={24}
+                height={24}
                 className="mr-2"
               />
-              DT<span className="text-green-300">Capture</span>26
+              Dream<span className="text-green-300">Team</span>27 Capture
             </NavLink>
-            
+
             {/* Mobile menu button */}
             <div className="md:hidden">
               <button
@@ -84,15 +84,15 @@ export default function Navbar() {
               {/* Links only for authenticated users */}
               {user && (
                 <>
-                  <NavLink 
-                    href="/managers" 
+                  <NavLink
+                    href="/managers"
                     className="flex items-center gap-2 px-3 py-2 text-md hover:text-blue-100 transition-colors"
                   >
                     <UserPlus className="w-4 h-4" />
                     Managers
                   </NavLink>
-                  <NavLink 
-                    href="/upload" 
+                  <NavLink
+                    href="/upload"
                     className="flex items-center gap-2 px-3 py-2 text-md hover:text-blue-100 transition-colors"
                   >
                     <Upload className="w-4 h-4" />
@@ -116,7 +116,7 @@ export default function Navbar() {
               )}
             </div>
           </div>
-          
+
           {/* User info and sign out for authenticated users */}
           {user ? (
             <div className="hidden md:flex items-center gap-4">
@@ -148,15 +148,15 @@ export default function Navbar() {
               {/* Only show links for authenticated users */}
               {user ? (
                 <>
-                  <NavLink 
-                    href="/managers" 
+                  <NavLink
+                    href="/managers"
                     className="flex items-center gap-2 px-3 py-2 text-md hover:bg-[#2c313c] rounded-md transition-colors"
                   >
                     <UserPlus className="w-4 h-4" />
                     Managers
                   </NavLink>
-                  <NavLink 
-                    href="/upload" 
+                  <NavLink
+                    href="/upload"
                     className="flex items-center gap-2 px-3 py-2 text-md hover:bg-[#2c313c] rounded-md transition-colors"
                   >
                     <Upload className="w-4 h-4" />

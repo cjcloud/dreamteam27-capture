@@ -3,7 +3,7 @@ import DataTable from '@/components/data/data-table'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
-  title: 'View Data - DTCapture26',
+  title: 'View Data - DreamTeam27 Capture',
   description: 'View and manage uploaded data',
 }
 
