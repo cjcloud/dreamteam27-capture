@@ -8,7 +8,17 @@ export const DB_PATHS = {
   REFERENCE_PLAYERS: '/reference/2025-26/players',
   // Rolling history of the last two normalised pool pulls.
   HISTORY_CURRENT: '/history/players/current',
-  HISTORY_PREVIOUS: '/history/players/previous'
+  HISTORY_PREVIOUS: '/history/players/previous',
+  // Restricted archive of (manager, mobile) pairs, collated from /0 by the
+  // manual "Archive & sanitise" action (see /mobile-archive page and
+  // /api/manager-mobile-archive route) before mobile numbers are wiped from
+  // the live manager records. Read/write both require a verified Firebase
+  // ID token — see verifyAdminRequest() in lib/firebase-admin.ts. This is
+  // NOT protected by Realtime Database rules (the shared root rule is
+  // public-read and can't be overridden for a sub-path — see
+  // dreamteam27-manager's docs/SPEC-manager-app.md §11 for why); access
+  // control here is enforced entirely at the API layer instead.
+  MOBILE_ARCHIVE: '/secure/managerMobileArchive',
 };
 
 // Application constants

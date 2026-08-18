@@ -100,6 +100,31 @@ if (typeof window === 'undefined') {
 // Export the admin database instance
 export const adminDb = typeof window === 'undefined' ? admin.database() : null;
 
+// Verifies that a Request carries a valid Firebase ID token for a real,
+// logged-in capture admin — i.e. someone who passed the same login this
+// app's own AuthGuard requires. Used to gate sensitive server-side-only API
+// routes (like /api/manager-mobile-archive) that must NOT be reachable by
+// an unauthenticated request, since they touch data that Realtime Database
+// rules alone can't restrict (see DB_PATHS.MOBILE_ARCHIVE in constants.ts
+// for why). Returns the decoded token (uid/email) on success, or null if
+// the header is missing, malformed, or the token doesn't verify — callers
+// should respond 401 on null rather than throwing.
+export async function verifyAdminRequest(
+  request: Request
+): Promise<{ uid: string; email: string | null } | null> {
+  try {
+    const authHeader = request.headers.get('authorization') || '';
+    const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+    if (!token) return null;
+
+    const decoded = await admin.auth().verifyIdToken(token);
+    return { uid: decoded.uid, email: decoded.email ?? null };
+  } catch (error) {
+    console.error('[firebase-admin] ID token verification failed:', error);
+    return null;
+  }
+}
+
 // Helper functions for database operations
 export const adminDbOperations = {
   // Read operation

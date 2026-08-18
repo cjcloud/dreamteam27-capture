@@ -4,7 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useAuth } from '@/lib/auth-context'
 import { signOut } from '@/lib/firebase'
-import { LogOut, Upload, RefreshCw, UserPlus, Menu, X, BarChart3 } from 'lucide-react'
+import { LogOut, Upload, RefreshCw, UserPlus, Menu, X, BarChart3, Shield } from 'lucide-react'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
@@ -112,6 +112,13 @@ export default function Navbar() {
                     <BarChart3 className="w-4 h-4" />
                     Builder
                   </NavLink>
+                  <NavLink
+                    href="/mobile-archive"
+                    className="flex items-center gap-2 px-3 py-2 text-md hover:text-blue-100 transition-colors"
+                  >
+                    <Shield className="w-4 h-4" />
+                    Mobile Archive
+                  </NavLink>
                 </>
               )}
             </div>
@@ -175,6 +182,13 @@ export default function Navbar() {
                   >
                     <BarChart3 className="w-4 h-4" />
                     Builder
+                  </NavLink>
+                  <NavLink
+                    href="/mobile-archive"
+                    className="flex items-center gap-2 px-3 py-2 text-md hover:bg-[#2c313c] rounded-md transition-colors"
+                  >
+                    <Shield className="w-4 h-4" />
+                    Mobile Archive
                   </NavLink>
                   <div className="border-t border-[#2c313c] my-2"></div>
                   <div className="px-3 py-2">
