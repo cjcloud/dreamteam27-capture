@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { auth } from '@/lib/firebase'
 import { toast } from 'react-toastify'
-import { Shield, RefreshCw, Archive } from 'lucide-react'
+import { Shield, RefreshCw, Archive, Clock } from 'lucide-react'
+import { MOBILE_ARCHIVE_AVAILABLE_FROM_ISO, isMobileArchiveAvailable } from '@/lib/constants'
 
 type ArchiveEntry = {
   manager: string
@@ -42,6 +43,16 @@ export default function MobileArchivePage() {
   const [loading, setLoading] = useState(true)
   const [working, setWorking] = useState(false)
   const [lastResult, setLastResult] = useState<ArchiveResult | null>(null)
+  // Mirrors the client-side pattern dreamteam27-manager uses for its own
+  // registration/edit cutoff: seed from the current time, then re-check
+  // periodically so the page flips over on its own once the deadline
+  // passes, without needing a reload.
+  const [archiveAvailable, setArchiveAvailable] = useState(() => isMobileArchiveAvailable())
+
+  useEffect(() => {
+    const id = setInterval(() => setArchiveAvailable(isMobileArchiveAvailable()), 30_000)
+    return () => clearInterval(id)
+  }, [])
 
   const authedFetch = useCallback(async (input: RequestInfo, init: RequestInit = {}) => {
     const user = auth.currentUser
@@ -80,6 +91,8 @@ export default function MobileArchivePage() {
   }, [loadArchive])
 
   const handleArchiveAndSanitise = async () => {
+    if (!archiveAvailable) return
+
     const confirmed = window.confirm(
       'This will collate every real mobile number currently stored against a manager into the secure archive, ' +
         'then overwrite those mobile numbers with "ADMIN" in the live manager records. ' +
@@ -125,8 +138,20 @@ export default function MobileArchivePage() {
         Restricted, admin-only record of manager mobile numbers. Use &quot;Archive &amp; sanitise&quot; to collate every
         real mobile number currently in the live manager data into this archive, then replace it with{' '}
         <code className="bg-gray-100 px-1 rounded">ADMIN</code> in the live records. This is a manually-initiated,
-        one-way action — only run it once dreamteam27-manager has retired for the season.
+        one-way action, disabled until dreamteam27-manager retires for the season.
       </p>
+
+      {!archiveAvailable && (
+        <div className="flex items-start gap-2 mb-6 p-3 rounded-md bg-amber-50 border border-amber-200 text-amber-900 text-sm">
+          <Clock className="w-4 h-4 mt-0.5 flex-shrink-0" />
+          <p>
+            Archive &amp; sanitise is disabled until dreamteam27-manager retires on{' '}
+            <strong>Friday 21 August 2026, 19:59 (UK time)</strong> — mobile numbers are still live and changing
+            until then, so this action can&apos;t run yet. The button below will become active automatically once
+            the deadline passes.
+          </p>
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-3 mb-6">
         <button
@@ -139,8 +164,9 @@ export default function MobileArchivePage() {
         </button>
         <button
           onClick={handleArchiveAndSanitise}
-          disabled={working}
-          className="flex items-center gap-2 px-4 py-2 rounded-md bg-[#B9203C] text-white hover:bg-[#9c1a32] transition-colors disabled:opacity-50"
+          disabled={working || !archiveAvailable}
+          title={!archiveAvailable ? `Available from ${MOBILE_ARCHIVE_AVAILABLE_FROM_ISO}` : undefined}
+          className="flex items-center gap-2 px-4 py-2 rounded-md bg-[#B9203C] text-white hover:bg-[#9c1a32] transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#B9203C]"
         >
           <Archive className="w-4 h-4" />
           {working ? 'Archiving…' : 'Archive & sanitise'}

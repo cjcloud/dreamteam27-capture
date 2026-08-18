@@ -21,6 +21,20 @@ export const DB_PATHS = {
   MOBILE_ARCHIVE: '/secure/managerMobileArchive',
 };
 
+// The same registration/edit cutoff dreamteam27-manager retires at (see its
+// docs/SPEC-manager-app.md §4/§11) — kept here as a literal rather than a
+// cross-repo import since the two apps deploy independently. The mobile
+// archive/sanitise action (see /mobile-archive and
+// /api/manager-mobile-archive) is only meaningful once dreamteam27-manager
+// has actually retired and mobile numbers have stopped changing, so both the
+// UI and the API route gate on this same timestamp.
+export const MOBILE_ARCHIVE_AVAILABLE_FROM_ISO = '2026-08-21T19:59:00+01:00';
+export const MOBILE_ARCHIVE_AVAILABLE_FROM_MS = new Date(MOBILE_ARCHIVE_AVAILABLE_FROM_ISO).getTime();
+
+export function isMobileArchiveAvailable(now: number = Date.now()): boolean {
+  return now >= MOBILE_ARCHIVE_AVAILABLE_FROM_MS;
+}
+
 // Application constants
 export const APP_CONSTANTS = {
   MAX_PLAYERS: 11,

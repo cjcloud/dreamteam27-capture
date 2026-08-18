@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { adminDbOperations, verifyAdminRequest } from '@/lib/firebase-admin';
-import { DB_PATHS } from '@/lib/constants';
+import { DB_PATHS, MOBILE_ARCHIVE_AVAILABLE_FROM_ISO, isMobileArchiveAvailable } from '@/lib/constants';
 
 // Admin-only endpoint backing the "Archive & sanitise manager mobile
 // numbers" action on /mobile-archive. See docs there (and
@@ -67,6 +67,15 @@ export async function POST(request: Request) {
   }
 
   try {
+    if (!isMobileArchiveAvailable()) {
+      return NextResponse.json(
+        {
+          error: `Archive & sanitise is disabled until dreamteam27-manager retires at ${MOBILE_ARCHIVE_AVAILABLE_FROM_ISO}.`,
+        },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json().catch(() => ({}));
     if (body?.confirm !== true) {
       return NextResponse.json(
