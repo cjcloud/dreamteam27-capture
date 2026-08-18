@@ -430,10 +430,18 @@ export default function BuilderPage() {
           ? managers[idx].managerId
           : managers.reduce((mx: number, m: any) => Math.max(mx, m?.managerId || 0), 0) + 1
 
+      // dreamteam27-manager (self-service registration) keys teams by
+      // (manager name, mobile); capture doesn't collect one, so write the
+      // "ADMIN" placeholder unless this manager already has a real mobile
+      // (i.e. was originally self-registered) — preserve that rather than
+      // clobbering it. See dreamteam27-manager's docs/SPEC-manager-app.md §9.
+      const existingMobile = idx !== -1 ? managers[idx]?.mobile : undefined
+
       const teamData = {
         manager: managerName.trim(),
         name: managerName.trim(),
         managerId,
+        mobile: existingMobile ?? 'ADMIN',
         totalPoints: 0,
         gameWeekPoints: 0,
         teamDetails,

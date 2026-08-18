@@ -274,10 +274,24 @@ const SelectedPlayers = ({ managerId, managerName, onSaveComplete }: SelectedPla
                       samplePlayerPrices: teamPlayers.slice(0, 3).map(p => ({ name: p.playerName, price: p.price }))
                     });
 
+                    // dreamteam27-manager (the self-service registration app) keys
+                    // teams by (manager name, mobile). Capture doesn't collect a
+                    // mobile number, so every capture-written record needs SOME
+                    // mobile value or it would collide with self-service lookups.
+                    // "ADMIN" is a non-identifying placeholder that app treats
+                    // specially (see its docs/SPEC-manager-app.md §9) — it still
+                    // blocks name collisions but is never an edit-match target.
+                    // If this manager name already has a REAL mobile (i.e. it was
+                    // originally registered via the self-service app), preserve it
+                    // rather than clobbering it with "ADMIN" on a capture-side edit.
+                    const existingMobile =
+                      existingManagerIndex !== -1 ? managers[existingManagerIndex]?.mobile : undefined;
+
                     const teamData = {
                       managerId,
                       manager: managerName,
                       name: managerName,
+                      mobile: existingMobile ?? 'ADMIN',
                       totalPoints,
                       teamValue,
                       // The display app and capture editor read `teamDetails` /
@@ -540,11 +554,21 @@ const SelectedPlayers = ({ managerId, managerName, onSaveComplete }: SelectedPla
                   };
                 });
                 
+                // dreamteam27-manager (self-service registration) keys teams by
+                // (manager name, mobile); capture doesn't collect one, so write a
+                // placeholder — "ADMIN" — unless this manager already has a real
+                // mobile (i.e. was originally self-registered), in which case
+                // preserve it rather than clobbering it on a capture-side edit.
+                // See dreamteam27-manager's docs/SPEC-manager-app.md §9.
+                const existingMobile =
+                  existingManagerIndex !== -1 ? managers[existingManagerIndex]?.mobile : undefined;
+
                 // Prepare team data with calculated points
                 const teamData = {
                   gameWeekPoints: gameWeekPoints,
                   manager: managerName,
                   managerId: managerId,
+                  mobile: existingMobile ?? 'ADMIN',
                   posLast: existingManagerIndex !== -1 ? managers[existingManagerIndex].posLast : 1,
                   posNow: existingManagerIndex !== -1 ? managers[existingManagerIndex].posNow : 1,
                   teamDetails: teamDetails,
