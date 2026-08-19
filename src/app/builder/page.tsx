@@ -116,6 +116,7 @@ export default function BuilderPage() {
     key: 'score',
     dir: 'desc',
   })
+  const [search, setSearch] = useState('')
   const [squad, setSquad] = useState<SquadPlayer[]>([])
   const [managerName, setManagerName] = useState('')
   const [saving, setSaving] = useState(false)
@@ -335,8 +336,15 @@ export default function BuilderPage() {
     })
   }, [players, activePos, weights, starter, totalWeight, europe, lastSeason])
 
+  const searchTerm = search.trim().toLowerCase()
+
   const sorted = useMemo(() => {
-    const base = europeOnly ? rows.filter((r) => r.euro) : rows
+    let base = europeOnly ? rows.filter((r) => r.euro) : rows
+    if (searchTerm) {
+      base = base.filter(
+        (r) => r.name.toLowerCase().includes(searchTerm) || r.club.toLowerCase().includes(searchTerm)
+      )
+    }
     const arr = [...base]
     const { key, dir } = sort
     arr.sort((a: any, b: any) => {
@@ -349,7 +357,23 @@ export default function BuilderPage() {
       return dir === 'asc' ? av - bv : bv - av
     })
     return arr
-  }, [rows, sort, europeOnly])
+  }, [rows, sort, europeOnly, searchTerm])
+
+  // When a search is active and the current position tab has no matches,
+  // point the user at which other position tabs do — the table is always
+  // scoped to one position, so a global search still needs this hint.
+  const searchPositionHints = useMemo(() => {
+    if (!searchTerm) return []
+    return POSITIONS.filter((pos) => {
+      if (pos === activePos) return false
+      return players.some((p) => {
+        if ((p.position || '').toUpperCase() !== pos) return false
+        const name = (p.displayName || p.name || '').toLowerCase()
+        const club = (p.playerClub || '').toLowerCase()
+        return name.includes(searchTerm) || club.includes(searchTerm)
+      })
+    })
+  }, [searchTerm, activePos, players])
 
   const toggleSort = (key: string) =>
     setSort((s) =>
@@ -824,7 +848,7 @@ export default function BuilderPage() {
         </div>
 
         {/* Position tabs */}
-        <div className="flex gap-2 mb-3">
+        <div className="flex flex-wrap items-center gap-2 mb-3">
           {POSITIONS.map((pos) => (
             <button
               key={pos}
@@ -850,10 +874,45 @@ export default function BuilderPage() {
             />
             Table: European only
           </label>
-          <span className="ml-auto self-center text-xs text-slate-400">
+          <div className="relative ml-auto w-full sm:w-64">
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search player or club…"
+              aria-label="Search player or club"
+              className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 pr-7 text-sm placeholder:text-slate-500"
+            />
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                aria-label="Clear search"
+                title="Clear search"
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full text-slate-400 hover:text-white hover:bg-slate-700 leading-none"
+              >
+                ×
+              </button>
+            )}
+          </div>
+          <span className="self-center text-xs text-slate-400">
             {loading ? 'Loading…' : `${sorted.length} players`}
           </span>
         </div>
+
+        {searchTerm && searchPositionHints.length > 0 && (
+          <div className="text-xs text-slate-400 -mt-2 mb-3">
+            Also matches in:{' '}
+            {searchPositionHints.map((pos) => (
+              <button
+                key={pos}
+                onClick={() => setActivePos(pos)}
+                className="text-blue-400 hover:text-blue-300 underline underline-offset-2 mr-2"
+              >
+                {pos}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Table */}
         <div className="bg-slate-800 rounded-xl overflow-hidden">
@@ -957,7 +1016,9 @@ export default function BuilderPage() {
                 {!loading && sorted.length === 0 && (
                   <tr>
                     <td colSpan={9} className="px-3 py-6 text-center text-slate-400">
-                      No players found for {activePos}. Load the player pool via Upload.
+                      {searchTerm
+                        ? `No ${activePos} players match “${search.trim()}”.`
+                        : `No players found for ${activePos}. Load the player pool via Upload.`}
                     </td>
                   </tr>
                 )}
