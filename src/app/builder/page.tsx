@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'react-toastify'
 import { dbService } from '@/lib/db-service'
+import { useAuth } from '@/lib/auth-context'
 import {
   DB_PATHS,
   EUROPEAN_CLUBS,
@@ -105,6 +106,12 @@ const toMillions = (price?: number): number => {
 }
 
 export default function BuilderPage() {
+  // /builder is reachable without login (see client-layout.tsx). Season-
+  // setup actions below (European clubs config, freezing the reference
+  // snapshot) still require a real login — they write to paths the
+  // server-side gate in src/pages/api/db.ts does NOT allow anonymously —
+  // so they're hidden here rather than shown and left to fail with a 401.
+  const { user } = useAuth()
   const [players, setPlayers] = useState<RawPlayer[]>([])
   const [loading, setLoading] = useState(true)
   const [activePos, setActivePos] = useState<Pos>('DEF')
@@ -680,14 +687,23 @@ export default function BuilderPage() {
                 This list is the optimiser&apos;s only eligible pool — it picks solely from these clubs.
               </div>
             </div>
-            <button
-              onClick={() => setShowEuropeConfig((v) => !v)}
-              className="text-xs text-blue-400 hover:text-blue-300 shrink-0"
-            >
-              {showEuropeConfig ? 'Hide' : 'Edit'}
-            </button>
+            {user ? (
+              <button
+                onClick={() => setShowEuropeConfig((v) => !v)}
+                className="text-xs text-blue-400 hover:text-blue-300 shrink-0"
+              >
+                {showEuropeConfig ? 'Hide' : 'Edit'}
+              </button>
+            ) : (
+              <span
+                className="text-xs text-slate-500 shrink-0"
+                title="Season setup — log in to edit which clubs count as European."
+              >
+                Log in to edit
+              </span>
+            )}
           </div>
-          {showEuropeConfig && (
+          {showEuropeConfig && user && (
             <div className="mt-3">
               <div className="flex flex-wrap gap-2">
                 {allClubs.map((club) => (
@@ -744,15 +760,24 @@ export default function BuilderPage() {
                 </span>
               )}
             </div>
-            <button
-              onClick={captureLastSeason}
-              disabled={capturingSnapshot}
-              className={`px-3 py-1.5 rounded text-white text-xs disabled:opacity-50 ${
-                isFrozen ? 'bg-slate-600 hover:bg-slate-500' : 'bg-slate-700 hover:bg-slate-600'
-              }`}
-            >
-              {capturingSnapshot ? 'Freezing…' : isFrozen ? 'Freeze again' : 'Freeze from current pool'}
-            </button>
+            {user ? (
+              <button
+                onClick={captureLastSeason}
+                disabled={capturingSnapshot}
+                className={`px-3 py-1.5 rounded text-white text-xs disabled:opacity-50 ${
+                  isFrozen ? 'bg-slate-600 hover:bg-slate-500' : 'bg-slate-700 hover:bg-slate-600'
+                }`}
+              >
+                {capturingSnapshot ? 'Freezing…' : isFrozen ? 'Freeze again' : 'Freeze from current pool'}
+              </button>
+            ) : (
+              <span
+                className="text-xs text-slate-500"
+                title="Season setup — log in to freeze the reference snapshot."
+              >
+                Log in to freeze
+              </span>
+            )}
           </div>
           <div className="text-xs text-slate-500 mt-2">
             Freeze once while the pool still holds last season data — it becomes a read-only

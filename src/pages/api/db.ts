@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { adminDbOperations } from '@/lib/firebase-admin';
+import { adminDbOperations, verifyAdminRequest } from '@/lib/firebase-admin';
+import { DB_PATHS } from '@/lib/constants';
 
 // Types for API responses
 type ApiResponse = {
@@ -8,6 +9,21 @@ type ApiResponse = {
   error?: string;
   stack?: string; // dev-only diagnostic, included when NODE_ENV === 'development'
 };
+
+// This is the ONLY server-side enforcement point for every page's data —
+// the client-side AuthGuard (client-layout.tsx) is just a UI redirect and
+// never stopped a direct call here. /builder is intentionally reachable
+// without login (see PROJECT-STATUS.md), so its own writes (saving a team)
+// stay open; every other write requires a verified Firebase ID token.
+// Reads stay open across the board, matching the Realtime Database's own
+// public-read rule (see the MOBILE_ARCHIVE comment in constants.ts).
+const PUBLIC_WRITE_PATHS = new Set<string>([DB_PATHS.MANAGERS, '/timestamp']);
+
+// Never reachable through this generic passthrough, regardless of auth —
+// it has its own dedicated, gated route (see the comment on
+// DB_PATHS.MOBILE_ARCHIVE in constants.ts for why it needs to be handled
+// there instead of via a Realtime Database rule).
+const BLOCKED_PATHS = new Set<string>([DB_PATHS.MOBILE_ARCHIVE]);
 
 /**
  * API route for Firebase Admin SDK database operations
@@ -55,7 +71,35 @@ export default async function handler(
         error: 'Missing required fields: operation and path'
       });
     }
-    
+
+    if (BLOCKED_PATHS.has(path)) {
+      console.log(`Blocked path requested via generic /api/db: ${path}`);
+      return res.status(403).json({
+        success: false,
+        error: 'This path is not available through this endpoint.'
+      });
+    }
+
+    // Auth gate: reads are public; writes are public ONLY for the paths the
+    // unauthenticated /builder page itself needs to write (saving a team).
+    // Everything else requires a valid Firebase ID token.
+    const isPublicWrite = operation === 'set' && PUBLIC_WRITE_PATHS.has(path);
+    if (operation !== 'get' && !isPublicWrite) {
+      const authHeaderRaw = req.headers.authorization;
+      const authHeader = Array.isArray(authHeaderRaw) ? authHeaderRaw[0] : authHeaderRaw;
+      const pseudoRequest = {
+        headers: { get: (k: string) => (k.toLowerCase() === 'authorization' ? authHeader ?? null : null) },
+      } as unknown as Request;
+      const admin = await verifyAdminRequest(pseudoRequest);
+      if (!admin) {
+        console.log(`Rejected unauthenticated ${operation} on ${path}`);
+        return res.status(401).json({
+          success: false,
+          error: 'Login required for this operation.'
+        });
+      }
+    }
+
     // Perform the requested operation
     let result;
     try {

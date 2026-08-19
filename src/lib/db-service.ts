@@ -1,4 +1,5 @@
 import { toast } from 'react-toastify';
+import { auth } from './firebase';
 
 /**
  * Client-side service for interacting with the Firebase Admin SDK via API routes
@@ -19,6 +20,24 @@ const getApiUrl = () => {
   return `${baseUrl}/api/db`;
 };
 
+// Attaches a fresh Firebase ID token when a user is logged in, so
+// /api/db's server-side auth gate (see src/pages/api/db.ts) can tell a
+// real admin apart from an anonymous caller. Silently omitted when signed
+// out — that's expected on the public /builder page, and any operation
+// that actually requires it will come back 401 and surface as a toast.
+const authHeaders = async (): Promise<Record<string, string>> => {
+  try {
+    const user = auth?.currentUser;
+    if (user) {
+      const token = await user.getIdToken();
+      return { Authorization: `Bearer ${token}` };
+    }
+  } catch (error) {
+    console.error('[dbService] Failed to get ID token:', error);
+  }
+  return {};
+};
+
 export const dbService = {
   /**
    * Get data from a specific path in the database
@@ -35,6 +54,7 @@ export const dbService = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(await authHeaders()),
         },
         signal: AbortSignal.timeout(30000),
         body: JSON.stringify({
@@ -91,6 +111,7 @@ export const dbService = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(await authHeaders()),
         },
         signal: AbortSignal.timeout(30000),
         body: JSON.stringify({
@@ -158,6 +179,7 @@ export const dbService = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(await authHeaders()),
         },
         signal: AbortSignal.timeout(30000),
         body: JSON.stringify({
@@ -224,6 +246,7 @@ export const dbService = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(await authHeaders()),
         },
         signal: AbortSignal.timeout(30000),
         body: JSON.stringify({

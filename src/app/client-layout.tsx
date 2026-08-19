@@ -8,8 +8,12 @@ import ThemeSwitcher from '@/components/ThemeSwitcher';
 import { usePathname } from 'next/navigation';
 import 'react-toastify/dist/ReactToastify.css';
 
-// Routes that must stay reachable without being logged in.
-const PUBLIC_ROUTES = ['/login', '/register'];
+// Routes that must stay reachable without being logged in. /builder is
+// intentionally public (see PROJECT-STATUS.md) — everything else stays
+// behind AuthGuard. This list only controls whether the PAGE redirects to
+// /login; the real enforcement for writes is server-side, in
+// src/pages/api/db.ts.
+const PUBLIC_ROUTES = ['/login', '/register', '/builder'];
 
 export default function ClientLayout({
   children,
