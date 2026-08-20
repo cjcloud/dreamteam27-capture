@@ -217,8 +217,14 @@ export default function BuilderPage() {
     try {
       const pool = await dbService.get(DB_PATHS.PLAYER_DATA)
       const arr = Array.isArray(pool) ? pool : pool ? Object.values(pool) : []
-      // Freeze the FULL records as the reference.
-      await dbService.set(DB_PATHS.REFERENCE_PLAYERS, arr)
+      // Freeze the FULL records as the reference. dbService.set() does not
+      // throw on a rejected write (e.g. a 401 if the login session lapsed) --
+      // it returns {success:false} -- so that has to be checked explicitly,
+      // or a failed freeze reports success while writing nothing.
+      const freezeResult = await dbService.set(DB_PATHS.REFERENCE_PLAYERS, arr)
+      if (!freezeResult?.success) {
+        throw new Error(freezeResult?.error || 'Reference snapshot write was rejected')
+      }
       // Derive the name -> points lookup the table uses.
       const map: Record<string, number> = {}
       ;(arr as RawPlayer[]).forEach((p) => {
@@ -260,7 +266,10 @@ export default function BuilderPage() {
   const saveEurope = async () => {
     setSavingEurope(true)
     try {
-      await dbService.set(EUROPEAN_CLUBS_PATH, Array.from(europe))
+      const result = await dbService.set(EUROPEAN_CLUBS_PATH, Array.from(europe))
+      if (!result?.success) {
+        throw new Error(result?.error || 'European clubs write was rejected')
+      }
       setEuropeSource('database')
       setEuropeDirty(false)
       toast.success(`European clubs saved for the season (${europe.size} clubs).`)
@@ -490,8 +499,14 @@ export default function BuilderPage() {
         posLast: m.posNow || i + 1,
       }))
 
-      await dbService.set('/0', withPos)
-      await dbService.set('/timestamp', Date.now())
+      const saveResult = await dbService.set('/0', withPos)
+      if (!saveResult?.success) {
+        throw new Error(saveResult?.error || 'Team save was rejected')
+      }
+      const timestampResult = await dbService.set('/timestamp', Date.now())
+      if (!timestampResult?.success) {
+        console.warn('Timestamp write was rejected (team itself was saved):', timestampResult?.error)
+      }
       toast.success(`Saved ${managerName.trim()}'s team.`)
       setSquad([])
       setManagerName('')

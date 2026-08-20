@@ -15,13 +15,23 @@ export const LAST_UPDATED_PATH = '/2/0'
 
 export const uploadPlayerData = async (players: Player[]): Promise<void> => {
   try {
-    // Use API service for write operations
-    await dbService.set(PLAYER_DATA_PATH, players)
+    // Use API service for write operations. dbService.set() never throws on
+    // its own -- it swallows the error, shows its own toast, and returns
+    // {success:false}. Check that explicitly, or a rejected write (e.g. a
+    // 401 from /api/db's auth gate) looks identical to a real one and this
+    // function returns as if the upload succeeded when it silently did not.
+    const result = await dbService.set(PLAYER_DATA_PATH, players)
+    if (!result?.success) {
+      throw new Error(result?.error || 'Player data write was rejected')
+    }
 
     const managerSnapshot = await get(ref(db, MANAGER_DATA_PATH))
     if (!managerSnapshot.exists()) {
       const initialManagers = createInitialManagerData()
-      await dbService.set(MANAGER_DATA_PATH, initialManagers)
+      const managersResult = await dbService.set(MANAGER_DATA_PATH, initialManagers)
+      if (!managersResult?.success) {
+        throw new Error(managersResult?.error || 'Initial manager data write was rejected')
+      }
     }
 
     await updateLastUpdated(new Date())
@@ -72,7 +82,10 @@ const createInitialManagerData = (): Manager[] => {
 export const updateLastUpdated = async (date: Date): Promise<void> => {
   try {
     // Use API service for write operations
-    await dbService.set(LAST_UPDATED_PATH, date.toISOString())
+    const result = await dbService.set(LAST_UPDATED_PATH, date.toISOString())
+    if (!result?.success) {
+      throw new Error(result?.error || 'Last-updated timestamp write was rejected')
+    }
     console.log('Last updated timestamp saved:', date.toISOString())
   } catch (error) {
     if (error instanceof Error) {
@@ -89,7 +102,10 @@ export const updateManagerPoints = async (managers: Manager[]): Promise<void> =>
       updates[`${MANAGER_DATA_PATH}/${manager.managerId}`] = manager
     })
     // Use API service for write operations
-    await dbService.update('', updates)
+    const result = await dbService.update('', updates)
+    if (!result?.success) {
+      throw new Error(result?.error || 'Manager points write was rejected')
+    }
   } catch (error) {
     if (error instanceof Error) {
       throw new Error(`Failed to update manager points: ${error.message}`)
@@ -132,7 +148,10 @@ export const getPlayers = async (): Promise<Player[]> => {
 export const deletePlayers = async (): Promise<void> => {
   try {
     // Use API service for write operations
-    await dbService.set(PLAYER_DATA_PATH, null)
+    const result = await dbService.set(PLAYER_DATA_PATH, null)
+    if (!result?.success) {
+      throw new Error(result?.error || 'Player data delete was rejected')
+    }
     return
   } catch (error) {
     if (error instanceof Error) {
@@ -164,7 +183,10 @@ export const fetchManagerData = async (): Promise<Manager[]> => {
 export const deleteManagerData = async (): Promise<void> => {
   try {
     // Use API service for write operations
-    await dbService.set(MANAGER_DATA_PATH, null)
+    const result = await dbService.set(MANAGER_DATA_PATH, null)
+    if (!result?.success) {
+      throw new Error(result?.error || 'Manager data delete was rejected')
+    }
     console.log('Manager data deleted successfully')
     return
   } catch (error) {
@@ -284,8 +306,15 @@ export const checkDataExists = async (path: string): Promise<boolean> => {
 
 export const uploadJsonData = async (path: string, data: Record<string, unknown> | any[]): Promise<void> => {
   try {
-    // Use API service for write operations
-    await dbService.set(path, data)
+    // Use API service for write operations. See uploadPlayerData() above for
+    // why the success flag has to be checked explicitly -- dbService.set()
+    // does not throw on a rejected write (e.g. a 401 from /api/db because
+    // the caller wasn't actually logged in), so without this check a failed
+    // upload reports "Data uploaded successfully" while writing nothing.
+    const result = await dbService.set(path, data)
+    if (!result?.success) {
+      throw new Error(result?.error || `Write to ${path} was rejected`)
+    }
     console.log('Data uploaded successfully')
     return
   } catch (error) {

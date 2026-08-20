@@ -145,13 +145,23 @@ export default function FileUpload({ onUploadComplete = () => { } }: FileUploadP
     }
 
     // Rolling history: keep the last two normalised pulls (current + previous),
-    // so a bad update can be rolled back and updates can be diffed.
+    // so a bad update can be rolled back and updates can be diffed. Best
+    // effort -- deliberately doesn't block the main pool upload below. Note
+    // dbService.set() does NOT throw on a rejected write (e.g. a 401), it
+    // returns {success:false}, so this has to be checked explicitly or a
+    // failed backup looks identical to a working one.
     try {
       const prevCurrent = await dbService.get(DB_PATHS.HISTORY_CURRENT)
       if (prevCurrent) {
-        await dbService.set(DB_PATHS.HISTORY_PREVIOUS, prevCurrent)
+        const prevResult = await dbService.set(DB_PATHS.HISTORY_PREVIOUS, prevCurrent)
+        if (!prevResult?.success) {
+          console.warn('History snapshot (previous) was rejected (continuing with upload):', prevResult?.error)
+        }
       }
-      await dbService.set(DB_PATHS.HISTORY_CURRENT, data)
+      const currentResult = await dbService.set(DB_PATHS.HISTORY_CURRENT, data)
+      if (!currentResult?.success) {
+        console.warn('History snapshot (current) was rejected (continuing with upload):', currentResult?.error)
+      }
     } catch (histErr) {
       console.warn('History snapshot failed (continuing with upload):', histErr)
     }
