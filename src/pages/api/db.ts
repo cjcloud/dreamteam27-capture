@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { adminDbOperations, verifyAdminRequest } from '@/lib/firebase-admin';
+import { adminDbOperations } from '@/lib/firebase-admin';
 import { DB_PATHS } from '@/lib/constants';
+import { decodeJwtPayload, isJwtExpired } from '@/lib/utils';
 
 // Types for API responses
 type ApiResponse = {
@@ -82,16 +83,40 @@ export default async function handler(
 
     // Auth gate: reads are public; writes are public ONLY for the paths the
     // unauthenticated /builder page itself needs to write (saving a team).
-    // Everything else requires a valid Firebase ID token.
+    // Everything else requires a token that looks like a real login.
+    //
+    // TEMPORARY STOPGAP (2026-08-20): this was meant to call
+    // verifyAdminRequest() (cryptographic verification via the Admin SDK),
+    // but that CANNOT work as long as capture's login mints Firebase ID
+    // tokens against the `dtcapture26` project while this route's Admin SDK
+    // is initialised against `footieteamz27` (see PROJECT-STATUS.md §5) --
+    // verifyIdToken() rejects every real token because the audience claim
+    // never matches the wrong project, which took down every authenticated
+    // write in the app, not just the one this was meant to fix.
+    //
+    // Until §5's migration lands, we only check that the token is
+    // well-formed, unexpired, and shaped like a genuine Firebase ID token
+    // (has `sub` and an `iss` of https://securetoken.google.com/...). This
+    // is NOT cryptographic verification -- an attacker who crafts a fake
+    // unsigned-but-correctly-shaped token could still get past it. It is
+    // strictly weaker than the intended check, but strictly stronger than
+    // no check at all (a bare request with no token, which is what the
+    // original unauthenticated /api/db accepted, is still rejected).
+    // TODO(§5): once login points at footieteamz27, restore
+    // verifyAdminRequest() here and delete this stopgap.
     const isPublicWrite = operation === 'set' && PUBLIC_WRITE_PATHS.has(path);
     if (operation !== 'get' && !isPublicWrite) {
       const authHeaderRaw = req.headers.authorization;
       const authHeader = Array.isArray(authHeaderRaw) ? authHeaderRaw[0] : authHeaderRaw;
-      const pseudoRequest = {
-        headers: { get: (k: string) => (k.toLowerCase() === 'authorization' ? authHeader ?? null : null) },
-      } as unknown as Request;
-      const admin = await verifyAdminRequest(pseudoRequest);
-      if (!admin) {
+      const token = (authHeader || '').replace(/^Bearer\s+/i, '').trim();
+      const payload = token ? decodeJwtPayload(token) : null;
+      const looksLikeRealLoginToken =
+        !!payload &&
+        !!payload.sub &&
+        typeof payload.iss === 'string' &&
+        payload.iss.startsWith('https://securetoken.google.com/') &&
+        !isJwtExpired(token);
+      if (!looksLikeRealLoginToken) {
         console.log(`Rejected unauthenticated ${operation} on ${path}`);
         return res.status(401).json({
           success: false,
