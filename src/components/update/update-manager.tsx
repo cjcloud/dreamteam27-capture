@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
 import { useCart } from 'react-use-cart'
 import { dbService } from '@/lib/db-service'
-import { DB_PATHS, APP_CONSTANTS } from '@/lib/constants'
+import { DB_PATHS, APP_CONSTANTS, POSITION_ORDER } from '@/lib/constants'
 import { LeagueTable } from '@/components/league-table'
 import { Spinner } from '@/components/ui/spinner'
 import { ChevronRight, ArrowUp, ArrowDown, ChevronsRightLeft } from 'lucide-react'
@@ -55,6 +55,37 @@ function getOrdinal(n: number): string {
   const s = ["th", "st", "nd", "rd"];
   const v = n % 100;
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+
+// Reorders a manager's teamDetails into GK/DEF/MID/STR order. This ONLY
+// reorders — every player entry (and every field on it) is passed through
+// completely untouched; nothing is added, removed, or mutated. Ties (e.g.
+// two DEFs) keep their existing relative order (stable sort). Positions not
+// in POSITION_ORDER (e.g. an 'Unknown') sort last rather than being dropped.
+// Self-heals any team whose stored order predates the sort already applied
+// at selection time in selected-players.tsx, or that was written by another
+// app (e.g. dreamteam27-manager) without that logic.
+function sortTeamByPosition<T>(teamDetails: T, isArray: boolean): T {
+  const rank = (player: any): number => {
+    const pos = player?.playerDetails?.playerPosition;
+    return POSITION_ORDER[pos] ?? 99;
+  };
+
+  if (isArray) {
+    const arr = teamDetails as unknown as any[];
+    return [...arr]
+      .map((player, index) => ({ player, index }))
+      .sort((a, b) => rank(a.player) - rank(b.player) || a.index - b.index)
+      .map(({ player }) => player) as unknown as T;
+  }
+
+  // Object-keyed teamDetails: rebuild with the same key -> value pairs,
+  // just reordered, so no data is lost or altered.
+  const obj = teamDetails as unknown as Record<string, any>;
+  const sortedEntries = Object.entries(obj)
+    .map(([key, player], index) => ({ key, player, index }))
+    .sort((a, b) => rank(a.player) - rank(b.player) || a.index - b.index);
+  return Object.fromEntries(sortedEntries.map(({ key, player }) => [key, player])) as unknown as T;
 }
 
 // Define all helper functions before the component
@@ -347,6 +378,10 @@ export default function UpdateManager({ managerName }: { managerName?: string })
               updatedTeamDetails[key] = updatePlayer(p);
             });
           }
+
+          // Re-order only (see sortTeamByPosition doc comment) — every
+          // player's data is untouched, this just fixes display order.
+          updatedTeamDetails = sortTeamByPosition(updatedTeamDetails, isArray);
 
           return {
             ...manager,
