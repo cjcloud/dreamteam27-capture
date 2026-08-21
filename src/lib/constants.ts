@@ -42,6 +42,13 @@ export const APP_CONSTANTS = {
   MIN_MANAGER_NAME_LENGTH: 3
 };
 
+// Canonical squad display order. Matches the ordering already applied at
+// selection time in components/managers/selected-players.tsx — kept here so
+// it can also be reused wherever a team is re-saved (e.g. the gameweek
+// refresh in components/update/update-manager.tsx) to self-heal any team
+// whose stored order predates that logic or was written by another app.
+export const POSITION_ORDER: Record<string, number> = { GK: 1, DEF: 2, MID: 3, STR: 4 };
+
 // Allowed outfield formations (DEF-MID-STR); every squad also has exactly 1 GK.
 export const ALLOWED_FORMATIONS = [
   '4-4-2',
